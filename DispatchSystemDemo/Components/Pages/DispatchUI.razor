@@ -1,0 +1,115 @@
+﻿@page "/DispatchUI"
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime;
+
+<div class="row mb-2">
+    <div class="col-md-1">
+        <label for="rows" class="demo-text cw-320 mb-1">
+            Rows:
+        </label>
+        <DxSpinEdit @bind-Value="@Rows"
+                    CssClass="cw-320"
+                    InputId="rows" />
+    </div>
+
+    <div class="col-md-1">
+        <label for="cols" class="demo-text cw-320 mb-1">
+            Columns:
+        </label>
+        <DxSpinEdit @bind-Value="@Cols"
+                    CssClass="cw-320"
+                    InputId="cols" />
+    </div>
+
+    <div class="col-md-2">
+        <label for="add-card" class="demo-text cw-320 mb-1">
+            Card content
+        </label>
+        <DxTextBox @bind-Text="@CardText"
+                   CssClass="cw-320"
+                   InputId="add-card" />
+    </div>
+
+    <div class="col-md-2" style="padding-top:1.5rem;">
+        <DxButton RenderStyle="ButtonRenderStyle.Primary"
+                  Text="Add card"
+                  Click="AddCard"
+                  CssClass="w-100" />
+    </div>
+
+</div>
+
+<div id="order-sheet-container" class="mb-2">
+    <div class="order-sheet-cards" id="order-sheet-cards-container">
+        @{
+            foreach (var content in OrderSheetCardContent)
+            {
+                <div class="order-sheet-card" draggable="true">
+                    <button class="delete-btn" @onclick="(async () => await RemoveCard(content))">×</button>
+                    <div class="order-sheet-card-text">@content</div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<table class="table" id="dispatch-ui-table">
+    <tbody>
+        @for (int i = 0; i < Rows; i++)
+        {
+            <tr>
+                @for (int j = 0; j < Cols; j++)
+                {
+                    <td class="draggable-cell" draggable="true"></td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+ 
+@code {
+    private int Rows = 3;
+    private int Cols = 2;
+    private string CardText = string.Empty;
+
+
+    private List<string> OrderSheetCardContent = new List<string>();
+
+    protected override void OnInitialized()
+    {
+        OrderSheetCardContent = new List<string>()
+        {
+            "1 -> 2",
+            "1 -> 8",
+            "1 -> 9",
+            "3 -> 7",
+            "5 -> 6",
+            "6 -> 7",
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("initializeDragAndDrop");
+        }
+    }
+
+    private async Task AddCard(MouseEventArgs args)
+    {
+        if (!string.IsNullOrWhiteSpace(CardText) && !OrderSheetCardContent.Any(A => A == CardText))
+        {
+            OrderSheetCardContent.Add(CardText);
+            //await InvokeAsync(StateHasChanged);
+            await Task.Delay(1);
+            await JSRuntime.InvokeVoidAsync("attachDragListenerToNewCards");
+            CardText = string.Empty;
+        }
+    }
+
+    private async Task RemoveCard(string content)
+    {
+        await JSRuntime.InvokeVoidAsync("removeParentByContent", content);
+    }
+}
