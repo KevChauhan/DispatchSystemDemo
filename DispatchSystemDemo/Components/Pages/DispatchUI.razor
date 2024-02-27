@@ -54,10 +54,20 @@
 </div>
 
 <table class="table" id="dispatch-ui-table">
+    <thead>
+        <tr>
+            <th></th>
+            @for(int i = 1; i <= Cols; i++)
+            {
+                <th class="column-index-cell">@GetColumnHeader(i)</th>
+            }
+        </tr>
+    </thead>
     <tbody>
         @for (int i = 0; i < Rows; i++)
         {
             <tr>
+                <td class="row-index-cell">@(i+1)</td>
                 @for (int j = 0; j < Cols; j++)
                 {
                     <td class="draggable-cell" draggable="true"></td>
@@ -111,5 +121,17 @@
     private async Task RemoveCard(string content)
     {
         await JSRuntime.InvokeVoidAsync("removeParentByContent", content);
+    }
+
+    public string GetColumnHeader(int columnIndex)
+    {
+        string columnHeader = "";
+        while (columnIndex > 0)
+        {
+            int remainder = (columnIndex - 1) % 26;
+            columnHeader = (char)('A' + remainder) + columnHeader;
+            columnIndex = (columnIndex - remainder) / 26;
+        }
+        return columnHeader;
     }
 }

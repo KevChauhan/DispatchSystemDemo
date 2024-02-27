@@ -6,7 +6,6 @@
     const cards = document.querySelectorAll('.order-sheet-card');
 
     let draggedCard = null;
-
     //cards.forEach(card => {
     //    card.addEventListener('dragstart', dragStart);
     //});
@@ -39,14 +38,17 @@
 
     function drop(event) {
         event.preventDefault();
-
         const targetCell = event.target.closest('td');
         const existingCard = targetCell.querySelector('.order-sheet-card');
+        const sourceCell = draggedCard.parentNode;
 
-        if (draggedCard && event.target.childElementCount === 0 && !existingCard) {
-            console.log("Inside if condition");
-            event.target.appendChild(draggedCard);
+        if (draggedCard && targetCell !== sourceCell) {
+            if (existingCard) {
+                sourceCell.appendChild(existingCard);
+            }
+            targetCell.appendChild(draggedCard);
             draggedCard = null;
+            sourceCell = null;
         }
     }
 

@@ -123,12 +123,25 @@
 }
 
 .table {
-    border-collapse: collapse; /* Added border collapse */
-    border: 1px solid black; /* Added border for the table */
+    border-collapse: collapse;
+    border: 1px solid black;
 }
 
 .draggable-cell {
-    border: 1px solid gray; /* Added border for the cells */
-    width: 100px; /* Adjust as per your requirement */
-    height: 100px; /* Adjust as per your requirement */
+    border: 1px solid gray;
+    /*width: 100px;*/
+    height: 100px;
+}
+
+th {
+    border: 1px solid gray;
+}
+
+.row-index-cell {
+    width: 40px;
+    background-color: #f0f0f0;
+}
+
+.column-index-cell {
+    background-color: #f0f0f0;
 }
