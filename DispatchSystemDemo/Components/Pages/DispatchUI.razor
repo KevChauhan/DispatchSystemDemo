@@ -41,13 +41,13 @@
 </div>
 
 <div id="order-sheet-container" class="mb-2">
-    <div class="order-sheet-cards" id="order-sheet-cards-container">
+    <div class="order-sheet-cards" id="order-sheet-cards-container" @ondrop="@(async () => await OnDropCardsContainer())">
         @{
-            foreach (var content in OrderSheetCardContent)
+            foreach (var card in Cards)
             {
-                <div class="order-sheet-card" draggable="true">
-                    <button class="delete-btn" @onclick="(async () => await RemoveCard(content))">×</button>
-                    <div class="order-sheet-card-text">@content</div>
+                <div class="order-sheet-card" draggable="true" @ondragstart="@(() => OnDragStart(card))">
+                    <button class="delete-btn" @onclick="(async () => await RemoveCard(card))">×</button>
+                    <div class="order-sheet-card-text">@(card.CardText)</div>
                 </div>
             }
         }
@@ -71,7 +71,9 @@
                 <td class="row-index-cell">@(i + 1)</td>
                 @for (int j = 0; j < Cols; j++)
                 {
-                    <td class="draggable-cell" draggable="true"></td>
+                    int rowIndex = i;
+                    int columnIndex = j;
+                    <td class="draggable-cell" draggable="true" @ondrop="@(() => OnDropCell(rowIndex, columnIndex))"></td>
                 }
             </tr>
         }
@@ -84,14 +86,33 @@
     private string CardText = string.Empty;
 
     private List<string> OrderSheetCardContent = new List<string>();
+    private List<Card> Cards = new List<Card>();
+    private Card CardBeingTracked;
 
     public EventCallback<CardAddingEventArgs> CardAdding { get; set; }
     public EventCallback<CardAddedEventArgs> CardAdded { get; set; }
     public EventCallback<CardDeletingEventArgs> CardDeleting { get; set; }
     public EventCallback<CardDeletedEventArgs> CardDeleted { get; set; }
+    public EventCallback<CardChangingEventArgs> CardChanging { get; set; }
+    public EventCallback<CardChangedEventArgs> CardChanged { get; set; }
+
+    public CardAddingEventArgs CardAddingEventArgs { get; set; }
+    public CardDeletingEventArgs CardDeletingEventArgs { get; set; }
+    public CardChangingEventArgs CardChangingEventArgs { get; set; }
 
     protected override void OnInitialized()
     {
+
+        Cards = new List<Card>()
+        {
+            new Card(){ CardId = 1, CardText = "1 -> 2" },
+            new Card(){ CardId = 2, CardText = "1 -> 8" },
+            new Card(){ CardId = 3, CardText = "1 -> 9" },
+            new Card(){ CardId = 4, CardText = "3 -> 7" },
+            new Card(){ CardId = 5, CardText = "5 -> 6" },
+            new Card(){ CardId = 6, CardText = "6 -> 7" },
+        };
+
         OrderSheetCardContent = new List<string>()
         {
             "1 -> 2",
@@ -115,46 +136,43 @@
     {
         if (!string.IsNullOrWhiteSpace(CardText) && !OrderSheetCardContent.Any(A => A == CardText))
         {
-            Card card = new Card()
-                {
-                    CardText = CardText
-                };
-            var cardAddingEventArgs = new CardAddingEventArgs(card);
+            OrderSheetCardContent.Add(CardText);
+            //await InvokeAsync(StateHasChanged);
+            await Task.Delay(1);
+            await JSRuntime.InvokeVoidAsync("attachDragListenerToNewCards");
+            CardText = string.Empty;
+            // Card card = new Card()
+            //     {
+            //         CardText = CardText
+            //     };
+            // var cardAddingEventArgs = new CardAddingEventArgs(card);
 
             // Invoked card adding card before adding the card
-            await CardAdding.InvokeAsync(cardAddingEventArgs);
+            //await CardAdding.InvokeAsync(cardAddingEventArgs);
 
             // Checked wheather the operation is canceled by handler
-            if (!cardAddingEventArgs.Cancel)
-            {
-                // Database operation can be performed here
+            // if (!cardAddingEventArgs.Cancel)
+            // {
+            //     // Database operation can be performed here
 
-                OrderSheetCardContent.Add(CardText);
-                //await InvokeAsync(StateHasChanged);
-                await Task.Delay(1);
-                await JSRuntime.InvokeVoidAsync("attachDragListenerToNewCards");
-                CardText = string.Empty;
 
-                // Invoked card added event
-                await CardAdded.InvokeAsync(new CardAddedEventArgs(card));
-            }
+
+            //     // Invoked card added event
+            //     await CardAdded.InvokeAsync(new CardAddedEventArgs(card));
+            // }
         }
     }
 
-    private async Task RemoveCard(string content)
+    private async Task RemoveCard(Card card)
     {
-        Card card = new Card()
-        {
-            CardText = content
-        };
-        var cardDeletingEventArgs = new CardDeletingEventArgs(card);
+        CardDeletingEventArgs = new CardDeletingEventArgs(card);
 
         // Invoke card deleting event before deleting the card
-        await CardDeleting.InvokeAsync(cardDeletingEventArgs);
+        await CardDeleting.InvokeAsync(CardDeletingEventArgs);
 
-        if (!cardDeletingEventArgs.Cancel)
+        if (!CardDeletingEventArgs.Cancel)
         {
-            await JSRuntime.InvokeVoidAsync("removeParentByContent", content);
+            await JSRuntime.InvokeVoidAsync("removeParentByContent", card.CardText);
 
             // Invoke card deleted event once the card is deleted
             await CardDeleted.InvokeAsync(new CardDeletedEventArgs(card));
@@ -171,6 +189,54 @@
             columnIndex = (columnIndex - remainder) / 26;
         }
         return columnHeader;
+    }
+
+    private async Task OnDragStart(Card card)
+    {
+        CardBeingTracked = card;
+
+        if (CardBeingTracked.CardStatus == CardStatus.InCardsSection)
+        {
+            CardAddingEventArgs = new CardAddingEventArgs(card);
+            await CardAdding.InvokeAsync(CardAddingEventArgs);
+        }
+        else if (CardBeingTracked.CardStatus == CardStatus.Added)
+        {
+            CardDeletingEventArgs = new CardDeletingEventArgs(card);
+            await CardDeleting.InvokeAsync(CardDeletingEventArgs);
+
+            CardChangingEventArgs = new CardChangingEventArgs(card);
+            await CardChanging.InvokeAsync(CardChangingEventArgs);
+        }
+    }
+
+    private async Task OnDropCell(int row, int column)
+    {
+        if (CardAddingEventArgs != null && !CardAddingEventArgs.Cancel)
+        {
+            CardBeingTracked.Row = row;
+            CardBeingTracked.Column = column;
+            CardBeingTracked.CardStatus = CardStatus.Added;
+
+            await CardAdded.InvokeAsync(new CardAddedEventArgs(CardBeingTracked));
+            CardAddingEventArgs = null;
+        }
+
+        if (CardChangingEventArgs != null && !CardChangingEventArgs.Cancel && CardBeingTracked.CardStatus == CardStatus.Added
+            && (CardBeingTracked.Row != row || CardBeingTracked.Column != column))
+        {
+            // Card changed code here
+            await CardChanged.InvokeAsync(new CardChangedEventArgs(CardBeingTracked));
+            CardChangingEventArgs = null;
+        }
+    }
+
+    private async Task OnDropCardsContainer()
+    {
+        if (CardBeingTracked.CardStatus == CardStatus.Added && !CardDeletingEventArgs.Cancel)
+        {
+            await CardDeleted.InvokeAsync(new CardDeletedEventArgs(CardBeingTracked));
+        }
     }
 
     #region XXXing & XXXed event handler examples
@@ -225,11 +291,32 @@
     }
 
     /// <summary>
-    /// Example card deleted 
+    /// Example card deleted
     /// </summary>
     /// <param name="e"></param>
     /// <returns></returns>
     private async Task HandleCardDeleted(CardDeletedEventArgs e)
+    {
+        //
+
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleCardChanging(CardChangingEventArgs e)
+    {
+        // Validation
+        if (false)
+        {
+            e.Cancel = true;
+            await Task.CompletedTask;
+        }
+
+        // Database operation can be performed here
+
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleCardChanged(CardChangedEventArgs e)
     {
         //
 
