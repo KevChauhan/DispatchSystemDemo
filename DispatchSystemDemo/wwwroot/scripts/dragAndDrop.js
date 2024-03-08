@@ -6,6 +6,7 @@
     const cards = document.querySelectorAll('.order-sheet-card');
 
     let draggedCard = null;
+    let isChangeCancelled = false;
     //cards.forEach(card => {
     //    card.addEventListener('dragstart', dragStart);
     //});
@@ -42,7 +43,7 @@
         const existingCard = targetCell.querySelector('.order-sheet-card');
         const sourceCell = draggedCard.parentNode;
 
-        if (draggedCard && targetCell !== sourceCell) {
+        if (!isChangeCancelled && draggedCard && targetCell !== sourceCell) {
             if (existingCard) {
                 sourceCell.appendChild(existingCard);
             }
@@ -50,6 +51,7 @@
             draggedCard = null;
             sourceCell = null;
         }
+        isChangeCancelled = false;
     }
 
     function dropOrderSheet(event) {
@@ -67,8 +69,16 @@
         }
     }
 
+    function cancelChange()
+    {
+        isChangeCancelled = true;
+    }
+
     window.attachDragListenerToNewCards = attachDragListenerToNewCards;
+    window.cancelChange = cancelChange;
     attachDragListenerToNewCards();
+
+
 };
 
 //window.addEventListener('load', function () {
