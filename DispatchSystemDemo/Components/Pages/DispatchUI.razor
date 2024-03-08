@@ -85,7 +85,6 @@
     private int Cols = 2;
     private string CardText = string.Empty;
 
-    private List<string> OrderSheetCardContent = new List<string>();
     private List<Card> Cards = new List<Card>();
     private Card CardBeingTracked;
 
@@ -112,16 +111,6 @@
             new Card(){ CardId = 5, CardText = "5 -> 6" },
             new Card(){ CardId = 6, CardText = "6 -> 7" },
         };
-
-        OrderSheetCardContent = new List<string>()
-        {
-            "1 -> 2",
-            "1 -> 8",
-            "1 -> 9",
-            "3 -> 7",
-            "5 -> 6",
-            "6 -> 7",
-        };
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -134,9 +123,10 @@
 
     private async Task AddCard(MouseEventArgs args)
     {
-        if (!string.IsNullOrWhiteSpace(CardText) && !OrderSheetCardContent.Any(A => A == CardText))
+        if (!string.IsNullOrWhiteSpace(CardText) && !Cards.Any(A => A.CardText == CardText))
         {
-            OrderSheetCardContent.Add(CardText);
+            Card newCard = new Card() { CardId = 10, CardText = CardText };
+            Cards.Add(newCard);
             //await InvokeAsync(StateHasChanged);
             await Task.Delay(1);
             await JSRuntime.InvokeVoidAsync("attachDragListenerToNewCards");
