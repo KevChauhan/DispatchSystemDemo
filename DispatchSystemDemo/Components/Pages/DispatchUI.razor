@@ -127,7 +127,7 @@
     {
         if (!string.IsNullOrWhiteSpace(CardText) && !Cards.Any(A => A.CardText == CardText))
         {
-            Card newCard = new Card() { CardId = 10, CardText = CardText };
+            Card newCard = new Card() { CardId = GetNextCardId(), CardText = CardText };
             Cards.Add(newCard);
             //await InvokeAsync(StateHasChanged);
             await Task.Delay(1);
@@ -317,4 +317,9 @@
         await Task.CompletedTask;
     }
     #endregion
+
+    private int GetNextCardId()
+    {
+        return Cards.Max(M => M.CardId) + 1;
+    }
 }
